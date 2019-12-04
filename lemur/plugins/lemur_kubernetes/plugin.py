@@ -16,6 +16,8 @@ import urllib
 import requests
 import itertools
 
+from flask import current_app
+
 from lemur.certificates.models import Certificate
 from lemur.plugins.bases import DestinationPlugin
 
@@ -110,13 +112,18 @@ class KubernetesDestinationPlugin(DestinationPlugin):
         k8_cert = self.get_option('kubernetesServerCertificate', options)
         k8_namespace = self.get_option('kubernetesNamespace', options)
         k8_base_uri = self.get_option('kubernetesURL', options)
+        cert_owner = self.get_option('certificateOwner', options)
 
         k8s_api = K8sSession(k8_bearer, k8_cert)
 
-        cert = Certificate(body=body)
+        try:
+            cert = Certificate(body=body, owner=cert_owner)
+        except Exception as e:
+            current_app.logger.debug('Exception parsing cert: %s' % (e))
+            raise e
 
         # in the future once runtime properties can be passed-in - use passed-in secret name
-        secret_name = 'certs-' + urllib.quote_plus(cert.name)
+        secret_name = 'certs-' + urllib.parse.quote_plus(cert.cn.lower())
 
         err = ensure_resource(k8s_api, k8s_base_uri=k8_base_uri, namespace=k8_namespace, kind="secret", name=secret_name, data={
             'apiVersion': 'v1',
@@ -125,10 +132,10 @@ class KubernetesDestinationPlugin(DestinationPlugin):
                 'name': secret_name,
             },
             'data': {
-                'combined.pem': base64.b64encode(body + private_key),
-                'ca.crt': base64.b64encode(cert_chain),
-                'service.key': base64.b64encode(private_key),
-                'service.crt': base64.b64encode(body),
+                'combined.pem': base64.b64encode((body + private_key).encode()).decode(),
+                'ca.crt': base64.b64encode(cert_chain.encode()).decode(),
+                'service.key': base64.b64encode(private_key.encode()).decode(),
+                'service.crt': base64.b64encode(body.encode()).decode(),
             }
         })
 
