@@ -373,6 +373,8 @@ def update_destinations(target, value, initiator):
             status = SUCCESS_METRIC_STATUS
     except Exception as e:
         sentry.captureException()
+        current_app.logger.debug('exception in destination event for plugin: %s' % value.plugin_name)
+        current_app.logger.warning(e)
 
     metrics.send('destination_upload', 'counter', 1,
                  metric_tags={'status': status, 'certificate': target.name, 'destination': value.label})
