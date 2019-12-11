@@ -1,7 +1,7 @@
-FROM alpine:3.8
+FROM alpine:3.10
 
 ARG VERSION
-ENV VERSION master
+ENV VERSION=${VERSION:-master}
 
 ENV uid 1337
 ENV gid 1337
@@ -32,14 +32,13 @@ RUN addgroup -S ${group} -g ${gid} && \
                 nasm  \
                 zlib-dev \
                 postgresql-dev \
-                libressl-dev  \
+                openssl-dev  \
                 libffi-dev \
                 cyrus-sasl-dev \
                 openldap-dev && \
     mkdir -p /opt/lemur /home/lemur/.lemur/ && \
     curl -sSL https://github.com/Netflix/lemur/archive/$VERSION.tar.gz | tar xz -C /opt/lemur --strip-components=1 && \
-    pip3 install --upgrade pip && \
-    pip3 install --upgrade setuptools && \
+    pip3 install --upgrade pip wheel && \
     chmod +x /entrypoint && \
     mkdir -p /run/nginx/ /etc/nginx/ssl/ && \
     chown -R $user:$group /opt/lemur/ /home/lemur/.lemur/
