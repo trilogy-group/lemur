@@ -14,6 +14,7 @@ from cryptography.hazmat.backends import default_backend
 from lemur.utils import mktempfile
 from lemur.common.utils import parse_certificate
 
+from flask import current_app
 
 def ocsp_verify(cert_path, issuer_chain_path):
     """
@@ -29,10 +30,19 @@ def ocsp_verify(cert_path, issuer_chain_path):
     p1 = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     url, err = p1.communicate()
 
+    current_app.logger.debug('ocsp_uri: %s' % url)
+    current_app.logger.debug('ocsp_uri err: %s' % err)
+
+    current_app.logger.debug('issuer_chain_path: %s' % issuer_chain_path)
+    current_app.logger.debug('cert_path: %s' % cert_path)
+
     p2 = subprocess.Popen(['openssl', 'ocsp', '-issuer', issuer_chain_path,
                            '-cert', cert_path, "-url", url.strip()], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     message, err = p2.communicate()
+
+    current_app.logger.debug('message: %s' % message)
+    current_app.logger.debug('message err: %s' % err)
 
     p_message = message.decode('utf-8')
 
